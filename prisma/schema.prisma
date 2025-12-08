@@ -1,0 +1,85 @@
+// Schema do Banco de Dados - User Service
+// PostgreSQL Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TABELA: User
+// ============================================
+// Armazena informações dos usuários do sistema
+model User {
+  id           String    @id @default(uuid())
+  name         String    @db.VarChar(255)
+  email        String    @unique @db.VarChar(255)
+  address      String?   @db.Text
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  profilePictureUrl String? @map("profile_picture_url") @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  bankingDetails BankingDetails?
+  auditLogs      AuditLog[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// ============================================
+// TABELA: BankingDetails
+// ============================================
+// Armazena dados bancários dos usuários (agência e conta corrente)
+model BankingDetails {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  agency       String   @db.VarChar(10)
+  accountNumber String  @map("account_number") @db.VarChar(20)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relacionamento
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agency, accountNumber])
+  @@map("banking_details")
+}
+
+// ============================================
+// TABELA: AuditLog
+// ============================================
+// Armazena logs de auditoria de ações realizadas pelos usuários
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String?  @map("user_id")
+  userEmail     String?  @map("user_email") @db.VarChar(255)
+  action        String   @db.VarChar(100) // Ex: "CREATE", "UPDATE", "DELETE", "LOGIN", etc.
+  entity        String   @db.VarChar(100) // Ex: "User", "BankingDetails", etc.
+  entityId      String?  @map("entity_id") @db.Uuid
+  changes       Json?    // Armazena estado antes/depois (JSONB)
+  ipAddress     String?  @map("ip_address") @db.VarChar(45) // Suporta IPv6
+  userAgent     String?  @map("user_agent") @db.Text
+  timestamp     DateTime @default(now())
+  result        String   @db.VarChar(50) // "SUCCESS", "FAILURE", "ERROR"
+  errorMessage  String?  @map("error_message") @db.Text
+  correlationId String?  @map("correlation_id") @db.VarChar(100)
+
+  // Relacionamento (opcional, pois pode haver logs sem usuário)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([action])
+  @@index([timestamp])
+  @@index([correlationId])
+  @@map("audit_logs")
+}
+
+
