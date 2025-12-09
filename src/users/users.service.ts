@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateBankingDetailsDto } from './dto/update-banking-details.dto';
 
@@ -17,24 +16,6 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
   ) {}
-
-  /**
-   * Cria um novo usuário
-   */
-  async create(createUserDto: CreateUserDto) {
-    // TODO: Implementar hash de senha no Card 22
-    const user = await this.prisma.user.create({
-      data: {
-        name: createUserDto.name,
-        email: createUserDto.email,
-        address: createUserDto.address,
-        passwordHash: createUserDto.password, // Será hasheado no Card 22
-      },
-    });
-
-    this.logger.log(`Usuário criado: ${user.id}`);
-    return user;
-  }
 
   /**
    * Busca um usuário por ID
