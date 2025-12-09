@@ -9,6 +9,8 @@ import { SecurityModule } from './security/security.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './security/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -17,6 +19,7 @@ import { UsersModule } from './users/users.module';
     MessagingModule,
     SecurityModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
@@ -25,6 +28,10 @@ import { UsersModule } from './users/users.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })
