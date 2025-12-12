@@ -7,13 +7,10 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configurar cookie parser
   app.use(cookieParser());
 
-  // Configurar Helmet para proteção contra ataques comuns
   app.use(helmet());
 
-  // Configurar CORS
   app.enableCors({
     origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

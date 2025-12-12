@@ -319,3 +319,4 @@ redis-cli FLUSHDB
    - Usar prefixos de chave para organização
 
 
+

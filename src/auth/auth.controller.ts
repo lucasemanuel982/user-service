@@ -43,7 +43,6 @@ export class AuthController {
       path: '/api/auth/refresh',
     });
 
-    // Retorna access token no body (não inclui refresh token)
     return {
       accessToken: result.accessToken,
       user: result.user,
@@ -54,7 +53,6 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() refreshDto: RefreshDto, @Req() req: Request) {
-    // Tenta obter refresh token do body ou do cookie
     const refreshToken =
       refreshDto.refreshToken ||
       (req.cookies as { refreshToken?: string })?.refreshToken;
@@ -78,7 +76,6 @@ export class AuthController {
       await this.authService.logout(accessToken, refreshToken);
     }
 
-    // Remove cookie de refresh token
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
