@@ -24,7 +24,6 @@ export class UsersController {
     @Param() params: UserIdParamDto,
     @CurrentUser() currentUser: { userId: string; email: string },
   ) {
-    // Validação de autorização: usuário só pode ver seus próprios dados
     if (params.id !== currentUser.userId) {
       throw new ForbiddenException(
         'Você não tem permissão para acessar este recurso',
@@ -35,8 +34,19 @@ export class UsersController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param() params: UserIdParamDto,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() currentUser: { userId: string; email: string },
+  ) {
+    if (params.id !== currentUser.userId) {
+      throw new ForbiddenException(
+        'Você não tem permissão para atualizar este recurso',
+      );
+    }
+
+    return this.usersService.update(params.id, updateUserDto);
   }
 
   @Patch(':id/banking-details')
