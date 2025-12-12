@@ -1,4 +1,10 @@
-import { IsString, IsEmail, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsNotEmpty,
+  MinLength,
+  IsOptional,
+} from 'class-validator';
 
 export class RegisterDto {
   @IsString()
@@ -18,5 +24,3 @@ export class RegisterDto {
   @IsOptional()
   address?: string;
 }
-
-
