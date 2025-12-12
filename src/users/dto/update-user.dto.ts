@@ -1,4 +1,6 @@
-import { IsString, IsEmail, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { UpdateBankingDetailsDto } from './update-banking-details.dto';
 
 export class UpdateUserDto {
   @IsString()
@@ -12,4 +14,9 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateBankingDetailsDto)
+  bankingDetails?: UpdateBankingDetailsDto;
 }
