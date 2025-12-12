@@ -15,11 +15,17 @@ RUN npm ci
 # Copiar código fonte
 COPY . .
 
+# Gerar Prisma Client
+RUN npx prisma generate
+
 # Build da aplicação
 RUN npm run build
 
 # Stage de produção
 FROM node:20-alpine AS production
+
+# Instalar OpenSSL necessário para o Prisma Client
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -33,11 +39,17 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
+# Instalar Prisma CLI temporariamente para gerar o client
+RUN npm install prisma --no-save
+
+# Gerar Prisma Client
+RUN npx prisma generate
+
+
 # Criar usuário não-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Mudar propriedade dos arquivos
 RUN chown -R nestjs:nodejs /app
 
 USER nestjs
