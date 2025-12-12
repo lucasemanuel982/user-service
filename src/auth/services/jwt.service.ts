@@ -28,16 +28,19 @@ export class AuthJwtService {
     private readonly redis: RedisService,
   ) {
     this.accessTokenSecret =
-      process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+      process.env.JWT_SECRET ||
+      'your-super-secret-jwt-key-change-in-production';
     this.refreshTokenSecret =
       process.env.JWT_REFRESH_SECRET ||
       'your-super-secret-refresh-jwt-key-change-in-production';
-    
+
     // Tempos de expiração configuráveis via variáveis de ambiente
     // Formato aceito: números seguidos de 's' (segundos), 'm' (minutos), 'h' (horas), 'd' (dias)
     // Exemplos: '20m', '1200s', '7d', '1h'
-    this.accessTokenExpiresIn = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '20m';
-    this.refreshTokenExpiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '7d';
+    this.accessTokenExpiresIn =
+      process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '20m';
+    this.refreshTokenExpiresIn =
+      process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '7d';
   }
 
   /**
@@ -58,16 +61,16 @@ export class AuthJwtService {
       jti,
     };
 
-    const [accessToken, refreshToken] = await Promise.all([
+    const [accessToken, refreshToken] = (await Promise.all([
       this.jwtService.signAsync(accessTokenPayload, {
         secret: this.accessTokenSecret,
         expiresIn: this.accessTokenExpiresIn,
-      }),
+      } as any),
       this.jwtService.signAsync(refreshTokenPayload, {
         secret: this.refreshTokenSecret,
         expiresIn: this.refreshTokenExpiresIn,
-      }),
-    ]);
+      } as any),
+    ])) as [string, string];
 
     return {
       accessToken,
@@ -80,9 +83,9 @@ export class AuthJwtService {
    */
   async verifyAccessToken(token: string): Promise<JwtPayload> {
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+      const payload = (await this.jwtService.verifyAsync(token, {
         secret: this.accessTokenSecret,
-      });
+      })) as JwtPayload;
 
       // Verifica se token está na blacklist
       const isBlacklisted = await this.isTokenBlacklisted(payload.jti);
@@ -91,7 +94,7 @@ export class AuthJwtService {
       }
 
       return payload;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Token inválido ou expirado');
     }
   }
@@ -101,9 +104,9 @@ export class AuthJwtService {
    */
   async verifyRefreshToken(token: string): Promise<JwtPayload> {
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+      const payload = (await this.jwtService.verifyAsync(token, {
         secret: this.refreshTokenSecret,
-      });
+      })) as JwtPayload;
 
       // Verifica se token está na blacklist
       const isBlacklisted = await this.isTokenBlacklisted(payload.jti);
@@ -124,9 +127,13 @@ export class AuthJwtService {
     const key = `token:blacklist:${jti}`;
     // TTL baseado no tempo de expiração do token (em segundos)
     const ttl = Math.max(expiresIn - Math.floor(Date.now() / 1000), 0);
-    
+
     if (ttl > 0) {
-      await this.redis.set(key, JSON.stringify({ jti, revokedAt: new Date().toISOString() }), ttl);
+      await this.redis.set(
+        key,
+        JSON.stringify({ jti, revokedAt: new Date().toISOString() }),
+        ttl,
+      );
     }
   }
 
@@ -158,7 +165,6 @@ export class AuthJwtService {
     return this.jwtService.signAsync(newAccessTokenPayload, {
       secret: this.accessTokenSecret,
       expiresIn: this.accessTokenExpiresIn,
-    });
+    } as any) as Promise<string>;
   }
 }
-

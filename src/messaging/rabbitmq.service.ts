@@ -37,8 +37,12 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private async connect(): Promise<void> {
     try {
       this.logger.log('Conectando ao RabbitMQ...');
-      this.connection = await amqp.connect(this.connectionUrl);
-      this.channel = await this.connection.createChannel();
+      const connectionResult = await amqp.connect(this.connectionUrl);
+      this.connection = connectionResult as unknown as amqp.Connection;
+      if (!this.connection) {
+        throw new Error('Falha ao estabelecer conexão com RabbitMQ');
+      }
+      this.channel = await (this.connection as any).createChannel();
       this.reconnectAttempts = 0;
       this.reconnectDelay = 1000;
 
@@ -230,7 +234,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         this.channel = null;
       }
       if (this.connection) {
-        await this.connection.close();
+        // A conexão do amqplib é fechada automaticamente quando o canal é fechado
+        // ou podemos usar o método close() se disponível
+        (this.connection as any).close?.();
         this.connection = null;
       }
       this.logger.log('Desconectado do RabbitMQ');

@@ -25,9 +25,7 @@ export class AuthService {
    * Registra um novo usuário
    */
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: registerDto.email },
-    });
+    const existingUser = await this.prisma.user.findUnique({where: { email: registerDto.email }});
 
     if (existingUser) {
       throw new ConflictException('Email já está em uso');
@@ -66,12 +64,19 @@ export class AuthService {
    */
   async login(loginDto: LoginDto) {
     // Busca usuário por email
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { email: loginDto.email },
-    });
+    })) as {
+      id: string;
+      email: string;
+      name: string;
+      passwordHash: string;
+    } | null;
 
     if (!user) {
-      this.logger.warn(`Tentativa de login com email inexistente: ${loginDto.email}`);
+      this.logger.warn(
+        `Tentativa de login com email inexistente: ${loginDto.email}`,
+      );
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -81,7 +86,9 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      this.logger.warn(`Tentativa de login com senha incorreta para: ${loginDto.email}`);
+      this.logger.warn(
+        `Tentativa de login com senha incorreta para: ${loginDto.email}`,
+      );
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -109,9 +116,9 @@ export class AuthService {
         refreshDto.refreshToken,
       );
 
-      const user = await this.prisma.user.findUnique({
+      const user = (await this.prisma.user.findUnique({
         where: { id: payload.sub },
-      });
+      })) as { id: string; email: string } | null;
 
       if (!user) {
         throw new UnauthorizedException('Usuário não encontrado');
@@ -137,7 +144,8 @@ export class AuthService {
    */
   async logout(accessToken: string, refreshToken?: string): Promise<void> {
     try {
-      const accessPayload = await this.jwtService.verifyAccessToken(accessToken);
+      const accessPayload =
+        await this.jwtService.verifyAccessToken(accessToken);
       const expiresIn = accessPayload.exp
         ? accessPayload.exp - Math.floor(Date.now() / 1000)
         : 1200; // 20 minutos padrão
@@ -146,9 +154,8 @@ export class AuthService {
 
       if (refreshToken) {
         try {
-          const refreshPayload = await this.jwtService.verifyRefreshToken(
-            refreshToken,
-          );
+          const refreshPayload =
+            await this.jwtService.verifyRefreshToken(refreshToken);
           const refreshExpiresIn = refreshPayload.exp
             ? refreshPayload.exp - Math.floor(Date.now() / 1000)
             : 604800; // 7 dias padrão
@@ -158,7 +165,7 @@ export class AuthService {
             refreshExpiresIn,
           );
         } catch {
-          this.logger.warn('Erro no refresh token', error);
+          this.logger.warn('Erro no refresh token');
         }
       }
 
@@ -168,5 +175,3 @@ export class AuthService {
     }
   }
 }
-
-

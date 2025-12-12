@@ -11,7 +11,8 @@ export class UpdateBankingDetailsDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^\d{5,20}$/, {
-    message: 'Número da conta deve conter apenas números e ter entre 5 e 20 dígitos',
+    message:
+      'Número da conta deve conter apenas números e ter entre 5 e 20 dígitos',
   })
   accountNumber: string;
 }
