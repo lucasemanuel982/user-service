@@ -19,7 +19,6 @@ export class JwtAuthGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    // Verifica se endpoint é público
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -47,7 +46,6 @@ export class JwtAuthGuard implements CanActivate {
   private async validateToken(token: string, request: any): Promise<boolean> {
     try {
       const payload = await this.jwtService.verifyAccessToken(token);
-      // Adiciona payload ao request para uso em controllers
       request.user = {
         userId: payload.sub,
         email: payload.email,

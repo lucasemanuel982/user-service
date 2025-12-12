@@ -25,7 +25,6 @@ export class AuthService {
    * Registra um novo usuário
    */
   async register(registerDto: RegisterDto) {
-    // Verifica se email já existe
     const existingUser = await this.prisma.user.findUnique({
       where: { email: registerDto.email },
     });
@@ -34,12 +33,10 @@ export class AuthService {
       throw new ConflictException('Email já está em uso');
     }
 
-    // Gera hash da senha
     const passwordHash = await this.passwordService.hashPassword(
       registerDto.password,
     );
 
-    // Cria usuário
     const user = await this.prisma.user.create({
       data: {
         name: registerDto.name,
@@ -78,7 +75,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Verifica senha
     const isPasswordValid = await this.passwordService.verifyPassword(
       loginDto.password,
       user.passwordHash,
@@ -89,7 +85,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Gera tokens
     const tokens = await this.jwtService.generateTokens(user.id, user.email);
 
     this.logger.log(`Login bem-sucedido: ${user.id}`);
@@ -114,7 +109,6 @@ export class AuthService {
         refreshDto.refreshToken,
       );
 
-      // Verifica se usuário ainda existe
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
       });
@@ -123,7 +117,6 @@ export class AuthService {
         throw new UnauthorizedException('Usuário não encontrado');
       }
 
-      // Gera novo access token
       const accessToken = await this.jwtService.refreshAccessToken(
         refreshDto.refreshToken,
       );
@@ -144,7 +137,6 @@ export class AuthService {
    */
   async logout(accessToken: string, refreshToken?: string): Promise<void> {
     try {
-      // Decodifica tokens para obter JTI
       const accessPayload = await this.jwtService.verifyAccessToken(accessToken);
       const expiresIn = accessPayload.exp
         ? accessPayload.exp - Math.floor(Date.now() / 1000)
@@ -166,15 +158,15 @@ export class AuthService {
             refreshExpiresIn,
           );
         } catch {
-          // Ignora erro se refresh token for inválido
+          this.logger.warn('Erro no refresh token', error);
         }
       }
 
       this.logger.log(`Logout realizado para usuário: ${accessPayload.sub}`);
     } catch (error) {
       this.logger.warn('Erro ao fazer logout:', error);
-      // Não lança erro para não expor informações
     }
   }
 }
+
 

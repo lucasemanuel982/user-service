@@ -21,7 +21,6 @@ export class UsersService {
    * Busca um usuário por ID
    */
   async findOne(id: string) {
-    // Tenta buscar do cache primeiro
     const cacheKey = `user:${id}`;
     const cached = await this.redis.get(cacheKey);
 
@@ -30,7 +29,6 @@ export class UsersService {
       return JSON.parse(cached);
     }
 
-    // Se não estiver no cache, busca do banco
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -42,7 +40,6 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
     }
 
-    // Armazena no cache
     await this.redis.set(
       cacheKey,
       JSON.stringify(user),
@@ -65,7 +62,6 @@ export class UsersService {
       },
     });
 
-    // Invalida cache
     await this.redis.del(`user:${id}`);
 
     this.logger.log(`Usuário ${id} atualizado`);
@@ -79,7 +75,6 @@ export class UsersService {
     userId: string,
     updateBankingDetailsDto: UpdateBankingDetailsDto,
   ) {
-    // Verifica se usuário existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -88,7 +83,7 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID ${userId} não encontrado`);
     }
 
-    // Atualiza ou cria dados bancários
+
     const bankingDetails = await this.prisma.bankingDetails.upsert({
       where: { userId },
       update: {
@@ -102,12 +97,11 @@ export class UsersService {
       },
     });
 
-    // Invalida cache do usuário
     await this.redis.del(`user:${userId}`);
 
     this.logger.log(`Dados bancários do usuário ${userId} atualizados`);
 
-    // TODO: Publicar evento no RabbitMQ no Card 9
+    // TODO: Publicar evento no RabbitMQ
     // await this.eventPublisher.publishBankingDetailsUpdated(...)
 
     return bankingDetails;
