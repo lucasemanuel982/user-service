@@ -182,7 +182,9 @@ describe('UsersService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(userWithoutBanking);
       mockRedisService.set.mockResolvedValue('OK');
 
-      const result = await service.findOne(userId);
+      const result = (await service.findOne(
+        userId,
+      )) as typeof userWithoutBanking;
 
       expect(result.bankingDetails).toBeNull();
       expect(result).toEqual(userWithoutBanking);
@@ -556,6 +558,112 @@ describe('UsersService', () => {
       await expect(service.update(userId, updateDto)).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+  });
+
+  describe('updateProfilePicture', () => {
+    const userId = 'user-id-123';
+    const profilePictureUrl =
+      '/uploads/profile-pictures/user-id-123-1234567890.jpg';
+    const mockUser = {
+      id: userId,
+      name: 'Test User',
+      email: 'test@example.com',
+      address: 'Test Address',
+      passwordHash: 'hashed-password',
+      profilePictureUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('deve atualizar a foto de perfil do usuário', async () => {
+      const updatedUser = {
+        id: userId,
+        profilePictureUrl,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockRedisService.del.mockResolvedValue(1);
+
+      const result = await service.updateProfilePicture(
+        userId,
+        profilePictureUrl,
+      );
+
+      expect(result).toEqual(updatedUser);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: { profilePictureUrl },
+        select: {
+          id: true,
+          profilePictureUrl: true,
+        },
+      });
+      expect(mockRedisService.del).toHaveBeenCalledWith(`user:${userId}`);
+    });
+
+    it('deve lançar NotFoundException quando usuário não existe', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateProfilePicture(userId, profilePictureUrl),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.updateProfilePicture(userId, profilePictureUrl),
+      ).rejects.toThrow(`Usuário com ID ${userId} não encontrado`);
+
+      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar BadRequestException quando ID é vazio', async () => {
+      await expect(
+        service.updateProfilePicture('', profilePictureUrl),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateProfilePicture('', profilePictureUrl),
+      ).rejects.toThrow('ID do usuário é obrigatório');
+    });
+
+    it('deve lançar BadRequestException quando URL é vazia', async () => {
+      await expect(service.updateProfilePicture(userId, '')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.updateProfilePicture(userId, '')).rejects.toThrow(
+        'URL da foto de perfil é obrigatória',
+      );
+    });
+
+    it('deve continuar funcionando mesmo se o cache falhar ao ser invalidado', async () => {
+      const updatedUser = {
+        id: userId,
+        profilePictureUrl,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockRedisService.del.mockRejectedValue(new Error('Cache error'));
+
+      const result = await service.updateProfilePicture(
+        userId,
+        profilePictureUrl,
+      );
+
+      expect(result).toEqual(updatedUser);
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
+    });
+
+    it('deve lançar InternalServerErrorException em caso de erro inesperado do Prisma', async () => {
+      mockPrismaService.user.findUnique.mockRejectedValue(
+        new Error('Database connection error'),
+      );
+
+      await expect(
+        service.updateProfilePicture(userId, profilePictureUrl),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 });
