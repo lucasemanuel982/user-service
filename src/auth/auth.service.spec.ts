@@ -7,9 +7,6 @@ import { AuthJwtService } from './services/jwt.service';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prismaService: PrismaService;
-  let passwordService: PasswordService;
-  let jwtService: AuthJwtService;
 
   const mockPrismaService = {
     user: {
@@ -49,9 +46,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    passwordService = module.get<PasswordService>(PasswordService);
-    jwtService = module.get<AuthJwtService>(AuthJwtService);
   });
 
   afterEach(() => {

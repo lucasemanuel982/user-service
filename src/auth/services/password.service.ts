@@ -55,7 +55,7 @@ export class PasswordService {
       return (
         hash.length === providedHash.length && hash.compare(providedHash) === 0
       );
-    } catch (error) {
+    } catch {
       return false;
     }
   }

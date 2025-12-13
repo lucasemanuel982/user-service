@@ -61,16 +61,16 @@ export class AuthJwtService {
       jti,
     };
 
-    const [accessToken, refreshToken] = (await Promise.all([
+    const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessTokenPayload, {
         secret: this.accessTokenSecret,
         expiresIn: this.accessTokenExpiresIn,
-      } as any),
+      } as Parameters<typeof this.jwtService.signAsync>[1]),
       this.jwtService.signAsync(refreshTokenPayload, {
         secret: this.refreshTokenSecret,
         expiresIn: this.refreshTokenExpiresIn,
-      } as any),
-    ])) as [string, string];
+      } as Parameters<typeof this.jwtService.signAsync>[1]),
+    ]);
 
     return {
       accessToken,
@@ -85,7 +85,7 @@ export class AuthJwtService {
     try {
       const payload = (await this.jwtService.verifyAsync(token, {
         secret: this.accessTokenSecret,
-      })) as JwtPayload;
+      })) as unknown as JwtPayload;
 
       // Verifica se token está na blacklist
       const isBlacklisted = await this.isTokenBlacklisted(payload.jti);
@@ -106,7 +106,7 @@ export class AuthJwtService {
     try {
       const payload = (await this.jwtService.verifyAsync(token, {
         secret: this.refreshTokenSecret,
-      })) as JwtPayload;
+      })) as unknown as JwtPayload;
 
       // Verifica se token está na blacklist
       const isBlacklisted = await this.isTokenBlacklisted(payload.jti);
@@ -115,7 +115,7 @@ export class AuthJwtService {
       }
 
       return payload;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Refresh token inválido ou expirado');
     }
   }
@@ -165,6 +165,6 @@ export class AuthJwtService {
     return this.jwtService.signAsync(newAccessTokenPayload, {
       secret: this.accessTokenSecret,
       expiresIn: this.accessTokenExpiresIn,
-    } as any) as Promise<string>;
+    } as Parameters<typeof this.jwtService.signAsync>[1]);
   }
 }

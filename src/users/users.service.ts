@@ -154,30 +154,29 @@ export class UsersService {
       }
 
       // Atualizar dados do usuário se houver campos para atualizar
-      let updatedUser;
       if (Object.keys(userUpdateData).length > 0) {
-        updatedUser = await this.prisma.user.update({
+        await this.prisma.user.update({
           where: { id },
           data: userUpdateData,
           include: { bankingDetails: true },
         });
-      } else {
-        updatedUser = existingUser;
       }
 
       // Atualizar dados bancários se fornecidos
       let bankingDetailsUpdated = false;
       if (hasBankingDetails && updateUserDto.bankingDetails) {
+        const bankingDetails =
+          updateUserDto.bankingDetails as UpdateBankingDetailsDto;
         await this.prisma.bankingDetails.upsert({
           where: { userId: id },
           update: {
-            agency: updateUserDto.bankingDetails.agency,
-            accountNumber: updateUserDto.bankingDetails.accountNumber,
+            agency: bankingDetails.agency,
+            accountNumber: bankingDetails.accountNumber,
           },
           create: {
             userId: id,
-            agency: updateUserDto.bankingDetails.agency,
-            accountNumber: updateUserDto.bankingDetails.accountNumber,
+            agency: bankingDetails.agency,
+            accountNumber: bankingDetails.accountNumber,
           },
         });
 
@@ -186,8 +185,8 @@ export class UsersService {
         // Publicar evento no broker quando dados bancários forem atualizados
         try {
           await this.eventPublisher.publishBankingDetailsUpdated(id, {
-            agency: updateUserDto.bankingDetails.agency,
-            account: updateUserDto.bankingDetails.accountNumber,
+            agency: bankingDetails.agency,
+            account: bankingDetails.accountNumber,
           });
           this.logger.log(
             `Evento de atualização de dados bancários publicado para usuário ${id}`,
