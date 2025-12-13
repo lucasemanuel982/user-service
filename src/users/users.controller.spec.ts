@@ -10,6 +10,7 @@ describe('UsersController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     updateBankingDetails: jest.fn(),
+    updateProfilePicture: jest.fn(),
   };
 
   const mockUser = {
@@ -141,6 +142,113 @@ describe('UsersController', () => {
       )) as typeof userWithoutBanking;
 
       expect(result.bankingDetails).toBeNull();
+    });
+  });
+
+  describe('update', () => {
+    const currentUser = {
+      userId: 'user-id-123',
+      email: 'test@example.com',
+      jti: 'token-id',
+    };
+
+    it('deve atualizar usuário quando ID corresponde ao usuário autenticado', async () => {
+      const params = { id: 'user-id-123' };
+      const updateDto = { name: 'Updated Name' };
+      const updatedUser = { ...mockUser, name: 'Updated Name' };
+
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.update(params, updateDto, currentUser);
+
+      expect(result).toEqual(updatedUser);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-123',
+        updateDto,
+      );
+      expect(mockUsersService.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('deve lançar ForbiddenException quando usuário tenta atualizar outro usuário', async () => {
+      const params = { id: 'other-user-id' };
+      const updateDto = { name: 'Updated Name' };
+
+      await expect(
+        controller.update(params, updateDto, currentUser),
+      ).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(params, updateDto, currentUser),
+      ).rejects.toThrow('Você não tem permissão para atualizar este recurso');
+
+      expect(mockUsersService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateProfilePicture', () => {
+    const currentUser = {
+      userId: 'user-id-123',
+      email: 'test@example.com',
+      jti: 'token-id',
+    };
+
+    const mockFile = {
+      fieldname: 'file',
+      originalname: 'profile.jpg',
+      encoding: '7bit',
+      mimetype: 'image/jpeg',
+      size: 1024 * 1024, // 1MB
+      buffer: Buffer.from('fake-image-data'),
+      destination: '',
+      filename: '',
+      path: '',
+    } as Express.Multer.File;
+
+    it('deve atualizar foto de perfil quando ID corresponde ao usuário autenticado', async () => {
+      const params = { id: 'user-id-123' };
+      const updatedProfile = {
+        id: 'user-id-123',
+        profilePictureUrl:
+          '/uploads/profile-pictures/user-id-123-1234567890.jpg',
+      };
+
+      mockUsersService.updateProfilePicture.mockResolvedValue(updatedProfile);
+
+      const result = await controller.updateProfilePicture(
+        params,
+        mockFile,
+        currentUser,
+      );
+
+      expect(result).toEqual(updatedProfile);
+      expect(mockUsersService.updateProfilePicture).toHaveBeenCalled();
+      expect(mockUsersService.updateProfilePicture).toHaveBeenCalledTimes(1);
+    });
+
+    it('deve lançar ForbiddenException quando usuário tenta atualizar foto de outro usuário', async () => {
+      const params = { id: 'other-user-id' };
+
+      await expect(
+        controller.updateProfilePicture(params, mockFile, currentUser),
+      ).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.updateProfilePicture(params, mockFile, currentUser),
+      ).rejects.toThrow('Você não tem permissão para atualizar este recurso');
+
+      expect(mockUsersService.updateProfilePicture).not.toHaveBeenCalled();
+    });
+
+    it('deve propagar NotFoundException do service quando usuário não existe', async () => {
+      const params = { id: 'user-id-123' };
+
+      mockUsersService.updateProfilePicture.mockRejectedValue(
+        new NotFoundException(`Usuário com ID ${params.id} não encontrado`),
+      );
+
+      await expect(
+        controller.updateProfilePicture(params, mockFile, currentUser),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockUsersService.updateProfilePicture).toHaveBeenCalled();
     });
   });
 });

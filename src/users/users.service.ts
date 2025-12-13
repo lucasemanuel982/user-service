@@ -293,6 +293,78 @@ export class UsersService {
   }
 
   /**
+   * Atualiza a foto de perfil do usuário
+   * Armazena a referência da imagem no banco de dados
+   */
+  async updateProfilePicture(
+    userId: string,
+    profilePictureUrl: string,
+  ): Promise<{ id: string; profilePictureUrl: string | null }> {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new BadRequestException('ID do usuário é obrigatório');
+    }
+
+    if (!profilePictureUrl || typeof profilePictureUrl !== 'string') {
+      throw new BadRequestException('URL da foto de perfil é obrigatória');
+    }
+
+    try {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!existingUser) {
+        throw new NotFoundException(`Usuário com ID ${userId} não encontrado`);
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: { profilePictureUrl },
+        select: {
+          id: true,
+          profilePictureUrl: true,
+        },
+      });
+
+      try {
+        await this.redis.del(`user:${userId}`);
+        this.logger.debug(`Cache do usuário ${userId} invalidado`);
+      } catch (cacheError: unknown) {
+        const errorMessage =
+          cacheError instanceof Error
+            ? cacheError.message
+            : 'Erro desconhecido';
+        this.logger.warn(
+          `Erro ao invalidar cache do usuário ${userId}: ${errorMessage}`,
+        );
+      }
+
+      this.logger.log(`Foto de perfil do usuário ${userId} atualizada`);
+
+      return updatedUser;
+    } catch (error: unknown) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Erro ao atualizar foto de perfil do usuário ${userId}: ${errorMessage}`,
+        errorStack,
+      );
+
+      throw new InternalServerErrorException(
+        'Erro ao atualizar foto de perfil. Tente novamente mais tarde.',
+      );
+    }
+  }
+
+  /**
    * Busca usuário por email
    */
   async findByEmail(email: string) {
