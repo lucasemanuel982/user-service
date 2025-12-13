@@ -5,7 +5,6 @@ import { UsersService } from './users.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let service: UsersService;
 
   const mockUsersService = {
     findOne: jest.fn(),
@@ -43,7 +42,6 @@ describe('UsersController', () => {
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
-    service = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -118,7 +116,10 @@ describe('UsersController', () => {
 
       mockUsersService.findOne.mockResolvedValue(mockUser);
 
-      const result = await controller.findOne(params, currentUser);
+      const result = (await controller.findOne(
+        params,
+        currentUser,
+      )) as typeof mockUser;
 
       expect(result.bankingDetails).toBeDefined();
       expect(result.bankingDetails.agency).toBe('0001');
@@ -134,7 +135,10 @@ describe('UsersController', () => {
 
       mockUsersService.findOne.mockResolvedValue(userWithoutBanking);
 
-      const result = await controller.findOne(params, currentUser);
+      const result = (await controller.findOne(
+        params,
+        currentUser,
+      )) as typeof userWithoutBanking;
 
       expect(result.bankingDetails).toBeNull();
     });
