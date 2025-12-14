@@ -73,6 +73,7 @@ export class AuthService {
       email: string;
       name: string;
       passwordHash: string;
+      role: string;
     } | null;
 
     if (!user) {
@@ -94,9 +95,13 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const tokens = await this.jwtService.generateTokens(user.id, user.email);
+    const tokens = await this.jwtService.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
 
-    this.logger.log(`Login bem-sucedido: ${user.id}`);
+    this.logger.log(`Login bem-sucedido: ${user.id} (role: ${user.role})`);
 
     return {
       accessToken: tokens.accessToken,
@@ -105,6 +110,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     };
   }
@@ -120,7 +126,7 @@ export class AuthService {
 
       const user = (await this.prisma.user.findUnique({
         where: { id: payload.sub },
-      })) as { id: string; email: string } | null;
+      })) as { id: string; email: string; role: string } | null;
 
       if (!user) {
         throw new UnauthorizedException('Usuário não encontrado');

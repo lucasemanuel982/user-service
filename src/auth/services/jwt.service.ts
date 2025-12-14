@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 export interface JwtPayload {
   sub: string; // userId
   email: string;
+  role?: string; // User role (user, admin, manager)
   jti?: string; // JWT ID (para blacklist)
   iat?: number;
   exp?: number;
@@ -46,18 +47,24 @@ export class AuthJwtService {
   /**
    * Gera access token e refresh token
    */
-  async generateTokens(userId: string, email: string): Promise<TokenResponse> {
+  async generateTokens(
+    userId: string,
+    email: string,
+    role?: string,
+  ): Promise<TokenResponse> {
     const jti = randomUUID();
 
     const accessTokenPayload: JwtPayload = {
       sub: userId,
       email,
+      role,
       jti,
     };
 
     const refreshTokenPayload: JwtPayload = {
       sub: userId,
       email,
+      role,
       jti,
     };
 
@@ -159,6 +166,7 @@ export class AuthJwtService {
     const newAccessTokenPayload: JwtPayload = {
       sub: payload.sub,
       email: payload.email,
+      role: payload.role, // Mantém a role do refresh token
       jti: randomUUID(), // Novo JTI para o access token
     };
 

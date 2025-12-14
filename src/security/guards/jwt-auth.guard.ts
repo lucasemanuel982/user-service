@@ -6,8 +6,18 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
+import type { Request } from 'express';
 import { AuthJwtService } from '../../auth/services/jwt.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role?: string;
+    jti?: string;
+  };
+}
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -28,7 +38,7 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -38,21 +48,31 @@ export class JwtAuthGuard implements CanActivate {
     return this.validateToken(token, request);
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+  private extractTokenFromHeader(
+    request: AuthenticatedRequest,
+  ): string | undefined {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || typeof authHeader !== 'string') {
+      return undefined;
+    }
+    const [type, token] = authHeader.split(' ');
     return type === 'Bearer' ? token : undefined;
   }
 
-  private async validateToken(token: string, request: any): Promise<boolean> {
+  private async validateToken(
+    token: string,
+    request: AuthenticatedRequest,
+  ): Promise<boolean> {
     try {
       const payload = await this.jwtService.verifyAccessToken(token);
       request.user = {
         userId: payload.sub,
         email: payload.email,
+        role: payload.role || 'user', // Default para 'user' se não houver role
         jti: payload.jti,
       };
       return true;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Token inválido ou expirado');
     }
   }

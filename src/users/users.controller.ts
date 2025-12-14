@@ -9,6 +9,7 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -17,6 +18,7 @@ import { UpdateBankingDetailsDto } from './dto/update-banking-details.dto';
 import { UserIdParamDto } from './dto/user-id-param.dto';
 import { CurrentUser } from '../security/decorators/current-user.decorator';
 import { FileValidationPipe } from './pipes/file-validation.pipe';
+import { RolesGuard } from '../security/guards/roles.guard';
 
 @Controller('api/users')
 export class UsersController {
@@ -54,10 +56,23 @@ export class UsersController {
   }
 
   @Patch(':id/banking-details')
+  @UseGuards(RolesGuard)
   async updateBankingDetails(
     @Param('id') id: string,
     @Body() updateBankingDetailsDto: UpdateBankingDetailsDto,
+    @CurrentUser()
+    currentUser: { userId: string; email: string; role?: string },
   ) {
+    if (
+      id !== currentUser.userId &&
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'manager'
+    ) {
+      throw new ForbiddenException(
+        'Você não tem permissão para atualizar dados bancários de outros usuários',
+      );
+    }
+
     return this.usersService.updateBankingDetails(id, updateBankingDetailsDto);
   }
 
