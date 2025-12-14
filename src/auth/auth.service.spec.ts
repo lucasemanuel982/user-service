@@ -107,7 +107,9 @@ describe('AuthService', () => {
       const mockUser = {
         id: 'user-id',
         email: 'test@example.com',
+        name: 'Test User',
         passwordHash: 'hashed:password',
+        role: 'user',
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
@@ -122,7 +124,13 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
       expect(result).toHaveProperty('user');
+      expect(result.user).toHaveProperty('role', 'user');
       expect(mockPasswordService.verifyPassword).toHaveBeenCalled();
+      expect(mockJwtService.generateTokens).toHaveBeenCalledWith(
+        'user-id',
+        'test@example.com',
+        'user',
+      );
     });
 
     it('deve lançar UnauthorizedException se email não existe', async () => {
@@ -147,7 +155,9 @@ describe('AuthService', () => {
       const mockUser = {
         id: 'user-id',
         email: 'test@example.com',
+        name: 'Test User',
         passwordHash: 'hashed:password',
+        role: 'user',
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
@@ -168,12 +178,14 @@ describe('AuthService', () => {
       const mockPayload = {
         sub: 'user-id',
         email: 'test@example.com',
+        role: 'user',
       };
 
       mockJwtService.verifyRefreshToken.mockResolvedValue(mockPayload);
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-id',
         email: 'test@example.com',
+        role: 'user',
       });
       mockJwtService.refreshAccessToken.mockResolvedValue('new-access-token');
 
