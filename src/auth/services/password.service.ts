@@ -25,7 +25,6 @@ export class PasswordService {
     const salt = randomBytes(this.saltLen);
     const hash = (await scryptAsync(password, salt, this.dkLen)) as Buffer;
 
-    // Formato: salt:hash (ambos em base64)
     return `${salt.toString('base64')}:${hash.toString('base64')}`;
   }
 
@@ -51,7 +50,6 @@ export class PasswordService {
 
       const providedHash = Buffer.from(hashBase64, 'base64');
 
-      // Comparação segura contra timing attacks
       return (
         hash.length === providedHash.length && hash.compare(providedHash) === 0
       );
@@ -60,3 +58,4 @@ export class PasswordService {
     }
   }
 }
+
