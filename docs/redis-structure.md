@@ -318,5 +318,3 @@ redis-cli FLUSHDB
    - Usar diferentes databases do Redis para diferentes propósitos (se necessário)
    - Usar prefixos de chave para organização
 
-
-

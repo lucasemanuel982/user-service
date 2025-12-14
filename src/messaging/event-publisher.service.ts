@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RabbitMQService } from './rabbitmq.service';
+import { EventValidatorService } from './event-validator.service';
 import { RABBITMQ_CONFIG } from './rabbitmq.config';
 import {
   BankingDetailsUpdatedEvent,
@@ -11,7 +12,10 @@ import { randomUUID } from 'crypto';
 export class EventPublisherService {
   private readonly logger = new Logger(EventPublisherService.name);
 
-  constructor(private readonly rabbitMQService: RabbitMQService) {}
+  constructor(
+    private readonly rabbitMQService: RabbitMQService,
+    private readonly eventValidator: EventValidatorService,
+  ) {}
 
   /**
    * Publica evento de atualização de dados bancários
@@ -32,6 +36,14 @@ export class EventPublisherService {
       timestamp: new Date().toISOString(),
       source: 'user-service',
     };
+
+    if (!this.eventValidator.validateBankingDetailsUpdated(event)) {
+      const error = new Error(
+        'Evento banking-details.updated inválido. Não será publicado.',
+      );
+      this.logger.error(error.message, event);
+      throw error;
+    }
 
     try {
       await this.rabbitMQService.publishEvent(

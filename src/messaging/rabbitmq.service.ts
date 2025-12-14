@@ -189,23 +189,52 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.channel.consume(
         queueName,
-        async (msg) => {
+        (msg) => {
           if (!msg) {
             return;
           }
 
-          try {
-            const content = JSON.parse(msg.content.toString()) as T;
-            await onMessage(content);
-            this.channel?.ack(msg);
-          } catch (error) {
-            this.logger.error(
-              `Erro ao processar mensagem da queue ${queueName}:`,
-              error,
-            );
-            // Rejeita a mensagem e não reenvia (evita loop infinito)
-            this.channel?.nack(msg, false, false);
-          }
+          void (async () => {
+            try {
+              let content: T;
+              try {
+                content = JSON.parse(msg.content.toString()) as T;
+              } catch (parseError) {
+                this.logger.error(
+                  `Erro ao fazer parse da mensagem da queue ${queueName}:`,
+                  parseError,
+                );
+                // Rejeita mensagem inválida sem reenvio
+                this.channel?.nack(msg, false, false);
+                return;
+              }
+
+              // Processa mensagem com timeout
+              const timeout = 30000; // 30 segundos
+              const timeoutPromise = new Promise<void>((_, reject) => {
+                setTimeout(
+                  () => reject(new Error('Timeout ao processar mensagem')),
+                  timeout,
+                );
+              });
+
+              await Promise.race([onMessage(content), timeoutPromise]);
+
+              // Confirma processamento bem-sucedido
+              this.channel?.ack(msg);
+              this.logger.debug(
+                `Mensagem processada com sucesso da queue ${queueName}`,
+              );
+            } catch (error) {
+              this.logger.error(
+                `Erro ao processar mensagem da queue ${queueName}:`,
+                error,
+              );
+              // Rejeita a mensagem e não reenvia (evita loop infinito)
+              // Mensagens rejeitadas podem ser enviadas para Dead Letter Queue no futuro
+              this.channel?.nack(msg, false, false);
+            }
+          })();
         },
         RABBITMQ_CONFIG.CONSUME_OPTIONS,
       );
