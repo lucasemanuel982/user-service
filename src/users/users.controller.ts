@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateBankingDetailsDto } from './dto/update-banking-details.dto';
@@ -20,11 +21,17 @@ import { CurrentUser } from '../security/decorators/current-user.decorator';
 import { FileValidationPipe } from './pipes/file-validation.pipe';
 import { RolesGuard } from '../security/guards/roles.guard';
 
+@ApiTags('Users')
+@ApiBearerAuth('JWT-auth')
 @Controller('api/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get(':id')
+  @ApiOperation({ summary: 'Buscar detalhes de um usuário' })
+  @ApiResponse({ status: 200, description: 'Usuário encontrado com sucesso' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   @HttpCode(HttpStatus.OK)
   async findOne(
     @Param() params: UserIdParamDto,
@@ -40,6 +47,9 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Atualizar dados de um usuário' })
+  @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
   @HttpCode(HttpStatus.OK)
   async update(
     @Param() params: UserIdParamDto,
@@ -56,6 +66,9 @@ export class UsersController {
   }
 
   @Patch(':id/banking-details')
+  @ApiOperation({ summary: 'Atualizar dados bancários de um usuário' })
+  @ApiResponse({ status: 200, description: 'Dados bancários atualizados com sucesso' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
   @UseGuards(RolesGuard)
   async updateBankingDetails(
     @Param('id') id: string,
@@ -77,6 +90,9 @@ export class UsersController {
   }
 
   @Patch(':id/profile-picture')
+  @ApiOperation({ summary: 'Atualizar foto de perfil de um usuário' })
+  @ApiResponse({ status: 200, description: 'Foto de perfil atualizada com sucesso' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   async updateProfilePicture(
