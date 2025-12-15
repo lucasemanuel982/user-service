@@ -6,9 +6,21 @@ import { AppService } from './app.service';
 import { MessagingModule } from './messaging/messaging.module';
 import { EventPublisherService } from './messaging/event-publisher.service';
 import { SecurityModule } from './security/security.module';
+import { DatabaseModule } from './database/database.module';
+import { RedisModule } from './redis/redis.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './security/guards/jwt-auth.guard';
 
 @Module({
-  imports: [MessagingModule, SecurityModule],
+  imports: [
+    DatabaseModule,
+    RedisModule,
+    MessagingModule,
+    SecurityModule,
+    UsersModule,
+    AuthModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
@@ -16,6 +28,10 @@ import { SecurityModule } from './security/security.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

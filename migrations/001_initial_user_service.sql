@@ -1,8 +1,6 @@
 -- Migration: Initial User Service Schema
 -- Description: Criação inicial das tabelas do User Service
--- ============================================
 -- TABELA: users
--- ============================================
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name VARCHAR(255) NOT NULL,
@@ -16,9 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Índices para users
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
--- ============================================
 -- TABELA: banking_details
--- ============================================
 CREATE TABLE IF NOT EXISTS banking_details (
     id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id VARCHAR(36) NOT NULL UNIQUE,
@@ -30,9 +26,7 @@ CREATE TABLE IF NOT EXISTS banking_details (
 -- Índices para banking_details
 CREATE INDEX IF NOT EXISTS idx_banking_details_user_id ON banking_details(user_id);
 CREATE INDEX IF NOT EXISTS idx_banking_details_agency_account ON banking_details(agency, account_number);
--- ============================================
 -- TABELA: audit_logs
--- ============================================
 CREATE TABLE IF NOT EXISTS audit_logs (
     id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id VARCHAR(36),
@@ -56,9 +50,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_entity_id ON audit_logs(entity,
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_correlation_id ON audit_logs(correlation_id);
--- ============================================
--- TRIGGER: Atualizar updated_at automaticamente
--- ============================================
 CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = CURRENT_TIMESTAMP;
 RETURN NEW;
 END;

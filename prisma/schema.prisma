@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -21,6 +22,7 @@ model User {
   address      String?   @db.Text
   passwordHash String    @map("password_hash") @db.VarChar(255)
   profilePictureUrl String? @map("profile_picture_url") @db.VarChar(500)
+  role         String    @default("user") @db.VarChar(50) // Roles: user, admin, manager
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -30,6 +32,7 @@ model User {
 
   @@index([email])
   @@index([createdAt])
+  @@index([role])
   @@map("users")
 }
 
@@ -81,5 +84,6 @@ model AuditLog {
   @@index([correlationId])
   @@map("audit_logs")
 }
+
 
 

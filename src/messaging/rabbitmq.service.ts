@@ -37,8 +37,12 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private async connect(): Promise<void> {
     try {
       this.logger.log('Conectando ao RabbitMQ...');
-      this.connection = await amqp.connect(this.connectionUrl);
-      this.channel = await this.connection.createChannel();
+      const connectionResult = await amqp.connect(this.connectionUrl);
+      this.connection = connectionResult as unknown as amqp.Connection;
+      if (!this.connection) {
+        throw new Error('Falha ao estabelecer conexão com RabbitMQ');
+      }
+      this.channel = await (this.connection as any).createChannel();
       this.reconnectAttempts = 0;
       this.reconnectDelay = 1000;
 
@@ -185,23 +189,52 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.channel.consume(
         queueName,
-        async (msg) => {
+        (msg) => {
           if (!msg) {
             return;
           }
 
-          try {
-            const content = JSON.parse(msg.content.toString()) as T;
-            await onMessage(content);
-            this.channel?.ack(msg);
-          } catch (error) {
-            this.logger.error(
-              `Erro ao processar mensagem da queue ${queueName}:`,
-              error,
-            );
-            // Rejeita a mensagem e não reenvia (evita loop infinito)
-            this.channel?.nack(msg, false, false);
-          }
+          void (async () => {
+            try {
+              let content: T;
+              try {
+                content = JSON.parse(msg.content.toString()) as T;
+              } catch (parseError) {
+                this.logger.error(
+                  `Erro ao fazer parse da mensagem da queue ${queueName}:`,
+                  parseError,
+                );
+                // Rejeita mensagem inválida sem reenvio
+                this.channel?.nack(msg, false, false);
+                return;
+              }
+
+              // Processa mensagem com timeout
+              const timeout = 30000; // 30 segundos
+              const timeoutPromise = new Promise<void>((_, reject) => {
+                setTimeout(
+                  () => reject(new Error('Timeout ao processar mensagem')),
+                  timeout,
+                );
+              });
+
+              await Promise.race([onMessage(content), timeoutPromise]);
+
+              // Confirma processamento bem-sucedido
+              this.channel?.ack(msg);
+              this.logger.debug(
+                `Mensagem processada com sucesso da queue ${queueName}`,
+              );
+            } catch (error) {
+              this.logger.error(
+                `Erro ao processar mensagem da queue ${queueName}:`,
+                error,
+              );
+              // Rejeita a mensagem e não reenvia (evita loop infinito)
+              // Mensagens rejeitadas podem ser enviadas para Dead Letter Queue no futuro
+              this.channel?.nack(msg, false, false);
+            }
+          })();
         },
         RABBITMQ_CONFIG.CONSUME_OPTIONS,
       );
@@ -230,7 +263,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         this.channel = null;
       }
       if (this.connection) {
-        await this.connection.close();
+        // A conexão do amqplib é fechada automaticamente quando o canal é fechado
+        // ou podemos usar o método close() se disponível
+        (this.connection as any).close?.();
         this.connection = null;
       }
       this.logger.log('Desconectado do RabbitMQ');
