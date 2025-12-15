@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateBankingDetailsDto } from './dto/update-banking-details.dto';
@@ -29,7 +29,25 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Buscar detalhes de um usuário' })
-  @ApiResponse({ status: 200, description: 'Usuário encontrado com sucesso' })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuário encontrado com sucesso',
+    schema: {
+      example: {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'João Silva',
+        email: 'joao.silva@example.com',
+        address: 'Rua das Flores, 123 - São Paulo, SP',
+        role: 'user',
+        bankingDetails: {
+          agency: '1234',
+          accountNumber: '12345678',
+        },
+        createdAt: '2025-12-15T10:30:00.000Z',
+        updatedAt: '2025-12-15T10:30:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   @HttpCode(HttpStatus.OK)
@@ -48,7 +66,20 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar dados de um usuário' })
-  @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso' })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuário atualizado com sucesso',
+    schema: {
+      example: {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'João Silva',
+        email: 'joao.silva@example.com',
+        address: 'Rua das Flores, 123 - São Paulo, SP',
+        updatedAt: '2025-12-15T10:30:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   @HttpCode(HttpStatus.OK)
   async update(
@@ -67,7 +98,19 @@ export class UsersController {
 
   @Patch(':id/banking-details')
   @ApiOperation({ summary: 'Atualizar dados bancários de um usuário' })
-  @ApiResponse({ status: 200, description: 'Dados bancários atualizados com sucesso' })
+  @ApiBody({ type: UpdateBankingDetailsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados bancários atualizados com sucesso',
+    schema: {
+      example: {
+        userId: '123e4567-e89b-12d3-a456-426614174000',
+        agency: '1234',
+        accountNumber: '12345678',
+        updatedAt: '2025-12-15T10:30:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   @UseGuards(RolesGuard)
   async updateBankingDetails(
